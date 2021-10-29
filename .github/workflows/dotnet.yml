@@ -28,3 +28,4 @@ jobs:
       run: dotnet test --no-build --verbosity normal
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
+      continue-on-error: true
