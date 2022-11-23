@@ -31,6 +31,10 @@ static Task generateResult(string directory, Provider provider)
                         {
                             _ = result.Append($",{line.Split(new[] { "日期：" }, StringSplitOptions.RemoveEmptyEntries)[0]}");
                         }
+                        if (line.StartsWith("交易日："))
+                        {
+                            _ = result.Append($",{line.Split(new[] { "交易日：" }, StringSplitOptions.RemoveEmptyEntries)[0]}");
+                        }
                         if (line.StartsWith("出入金Deposit/Withdrawal："))
                         {
                             var columns = line.Split(new[] { "出入金Deposit/Withdrawal：", "期末结存Balancec/f：" }, StringSplitOptions.RemoveEmptyEntries);
@@ -116,7 +120,7 @@ static Task generateResult(string directory, Provider provider)
                 throw new NotImplementedException();
         }
 
-        File.WriteAllLines($"Result_{directory.Split(Path.DirectorySeparatorChar)[1]}.csv", new[] { result.ToString() });
+        File.WriteAllLines($"Result_{directory.Split(Path.DirectorySeparatorChar)[1]}.csv", new[] { result.ToString() }, Encoding.UTF8);
     });
 }
 
