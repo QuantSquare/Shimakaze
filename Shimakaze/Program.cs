@@ -6,9 +6,9 @@ static Task generateResult(string directory, Provider provider)
 {
     return Task.Run(() =>
     {
-        Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}PositionClosed{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
-        Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
-        Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
+        _ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}PositionClosed{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
+        _ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
+        _ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
 
         StringBuilder result = new();
 
@@ -23,8 +23,7 @@ static Task generateResult(string directory, Provider provider)
                     {
                         if (line.StartsWith("客户号："))
                         {
-                            var clientId = line.Split(new[] { "客户号：" }, StringSplitOptions.RemoveEmptyEntries)[0];
-                            if (clientId != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
+                            if (line.Split(new[] { "客户号：" }, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
                             {
                                 throw new InvalidOperationException($"File={file}");
                             }
@@ -72,8 +71,7 @@ static Task generateResult(string directory, Provider provider)
                     {
                         if (line.StartsWith("客户号："))
                         {
-                            var clientId = line.Split(new[] { "客户号：", "客户名称：" }, StringSplitOptions.RemoveEmptyEntries)[0];
-                            if (clientId != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
+                            if (line.Split(new[] { "客户号：", "客户名称：" }, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
                             {
                                 throw new InvalidOperationException($"File={file}");
                             }
@@ -146,8 +144,7 @@ static Task generateResult(string directory, Provider provider)
                     {
                         if (line.StartsWith("客户号ClientID："))
                         {
-                            var clientId = line.Split(new[] { "客户号ClientID：", "客户名称ClientName：" }, StringSplitOptions.RemoveEmptyEntries)[0];
-                            if (clientId != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
+                            if (line.Split(new[] { "客户号ClientID：", "客户名称ClientName：" }, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
                             {
                                 throw new InvalidOperationException($"File={file}");
                             }
@@ -228,7 +225,7 @@ static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dict
         case Provider.Lanyee:
             throw new NotImplementedException($"Provider=Lanyee");
         case Provider.Rohon:
-            fileResult.AppendLine($"\"{columns[3]}\",\"{columns[6]}\",\"{columns[7]}\",\"{columns[11]}\"");
+            _ = fileResult.AppendLine($"\"{columns[3]}\",\"{columns[6]}\",\"{columns[7]}\",\"{columns[11]}\"");
             product = InstrumentToProductRegex().Replace(columns[3], "");
             if (!profitOrLoss.ContainsKey(product))
             {
@@ -240,7 +237,7 @@ static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dict
             }
             break;
         case Provider.Shinny:
-            fileResult.AppendLine($"\"{columns[6]}\",\"{columns[9]}\",\"{columns[10]}\",\"{columns[14]}\"");
+            _ = fileResult.AppendLine($"\"{columns[6]}\",\"{columns[9]}\",\"{columns[10]}\",\"{columns[14]}\"");
             product = InstrumentToProductRegex().Replace(columns[6], "");
             if (!profitOrLoss.ContainsKey(product))
             {
@@ -265,10 +262,10 @@ static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionar
         case Provider.Lanyee:
             throw new NotImplementedException($"Provider=Lanyee");
         case Provider.Rohon:
-            fileResult.AppendLine($"\"{columns[1]}\",\"{columns[3]}\",\"{columns[5]}\",\"{columns[8]}\",\"{columns[9]}\"");
+            _ = fileResult.AppendLine($"\"{columns[1]}\",\"{columns[3]}\",\"{columns[5]}\",\"{columns[8]}\",\"{columns[9]}\"");
             break;
         case Provider.Shinny:
-            fileResult.AppendLine($"\"{columns[4]}\",\"{columns[5]}\",\"{columns[7]}\",\"{columns[10]}\",\"{columns[11]}\"");
+            _ = fileResult.AppendLine($"\"{columns[4]}\",\"{columns[5]}\",\"{columns[7]}\",\"{columns[10]}\",\"{columns[11]}\"");
             break;
         default:
             throw new NotImplementedException($"Provider=Unknown");
@@ -277,10 +274,10 @@ static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionar
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-Directory.CreateDirectory("Results");
-Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}PositionClosed");
-Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}Positions");
-Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}ProfitOrLoss");
+_ = Directory.CreateDirectory("Results");
+_ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}PositionClosed");
+_ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}Positions");
+_ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}ProfitOrLoss");
 
 List<Task>? tasks = new();
 
