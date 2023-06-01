@@ -1,7 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using System.Text;
-
-Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+using System.Text.RegularExpressions;
 
 static Task generateResult(string directory, Provider provider)
 {
@@ -9,6 +8,7 @@ static Task generateResult(string directory, Provider provider)
     {
         Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}PositionClosed{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
         Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
+        Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
 
         StringBuilder result = new();
 
@@ -26,13 +26,17 @@ static Task generateResult(string directory, Provider provider)
                             var clientId = line.Split(new[] { "客户号：" }, StringSplitOptions.RemoveEmptyEntries)[0];
                             if (clientId != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
                             {
-                                throw new InvalidOperationException();
+                                throw new InvalidOperationException($"File={file}");
                             }
-                            _ = result.Append($"\"{clientId}\"");
                         }
                         if (line.StartsWith("日期："))
                         {
-                            _ = result.Append($",\"{line.Split(new[] { "日期：" }, StringSplitOptions.RemoveEmptyEntries)[0]}\"");
+                            var date = line.Split(new[] { "日期：" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                            _ = result.Append($"\"{date}\"");
+                            if (date != file.Split(Path.DirectorySeparatorChar)[2].Split(".")[0].Split("_")[^1])
+                            {
+                                throw new InvalidOperationException($"File={file}");
+                            }
                         }
                         if (line.StartsWith("交易日："))
                         {
@@ -52,7 +56,7 @@ static Task generateResult(string directory, Provider provider)
                 }
                 break;
             case Provider.Lanyee:
-                throw new NotImplementedException();
+                throw new NotImplementedException($"Provider=Lanyee");
             case Provider.Rohon:
                 foreach (var file in Directory.EnumerateFiles(directory).Where(s => s.Split(Path.DirectorySeparatorChar)[2].StartsWith("20")))
                 {
@@ -62,6 +66,7 @@ static Task generateResult(string directory, Provider provider)
                     StringBuilder? fileResult = null;
                     StringBuilder positionClosed = new(), positions = new();
                     ParseTable? parseTable = null;
+                    Dictionary<string, decimal> profitOrLoss = new();
 
                     foreach (var line in File.ReadLines(file, Encoding.GetEncoding("GB18030")).Select(s => s.Replace(" ", "")))
                     {
@@ -70,14 +75,17 @@ static Task generateResult(string directory, Provider provider)
                             var clientId = line.Split(new[] { "客户号：", "客户名称：" }, StringSplitOptions.RemoveEmptyEntries)[0];
                             if (clientId != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
                             {
-                                throw new InvalidOperationException();
+                                throw new InvalidOperationException($"File={file}");
                             }
-                            _ = result.Append($"\"{clientId}\"");
                         }
                         if (line.StartsWith("日期："))
                         {
                             date = line.Split(new[] { "日期：" }, StringSplitOptions.RemoveEmptyEntries)[0];
-                            _ = result.Append($",\"{date}\"");
+                            _ = result.Append($"\"{date}\"");
+                            if (date != file.Split(Path.DirectorySeparatorChar)[2].Split(".")[0].Split("_")[^1])
+                            {
+                                throw new InvalidOperationException($"File={file}");
+                            }
                         }
                         if (line.StartsWith("出入金："))
                         {
@@ -109,7 +117,7 @@ static Task generateResult(string directory, Provider provider)
                                 default:
                                     if (fileResult != null && parseTable != null)
                                     {
-                                        parseTable.Invoke(line.Split("|"), fileResult, provider);
+                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, provider);
                                     }
                                     break;
                             }
@@ -118,6 +126,7 @@ static Task generateResult(string directory, Provider provider)
 
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}PositionClosed{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}PositionClosed_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", new[] { positionClosed.ToString() }, Encoding.UTF8);
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}Positions_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", new[] { positions.ToString() }, Encoding.UTF8);
+                    File.WriteAllLines($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}ProfitOrLoss_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", profitOrLoss.Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
 
                     _ = result.AppendLine();
                 }
@@ -131,6 +140,7 @@ static Task generateResult(string directory, Provider provider)
                     StringBuilder? fileResult = null;
                     StringBuilder positionClosed = new(), positions = new();
                     ParseTable? parseTable = null;
+                    Dictionary<string, decimal> profitOrLoss = new();
 
                     foreach (var line in File.ReadAllLines(file, Encoding.GetEncoding("GB18030")).Select(s => s.Replace(" ", "")))
                     {
@@ -139,14 +149,17 @@ static Task generateResult(string directory, Provider provider)
                             var clientId = line.Split(new[] { "客户号ClientID：", "客户名称ClientName：" }, StringSplitOptions.RemoveEmptyEntries)[0];
                             if (clientId != file.Split(Path.DirectorySeparatorChar)[1].Split("_")[^1])
                             {
-                                throw new InvalidOperationException();
+                                throw new InvalidOperationException($"File={file}");
                             }
-                            _ = result.Append($"\"{clientId}\"");
                         }
                         if (line.StartsWith("日期Date："))
                         {
                             date = line.Split(new[] { "日期Date：" }, StringSplitOptions.RemoveEmptyEntries)[0];
-                            _ = result.Append($",\"{date}\"");
+                            _ = result.Append($"\"{date}\"");
+                            if (date != file.Split(Path.DirectorySeparatorChar)[2].Split(".")[0].Split("_")[^1])
+                            {
+                                throw new InvalidOperationException($"File={file}");
+                            }
                         }
                         if (line.StartsWith("出入金Deposit/Withdrawal："))
                         {
@@ -183,7 +196,7 @@ static Task generateResult(string directory, Provider provider)
                                 default:
                                     if (fileResult != null && parseTable != null)
                                     {
-                                        parseTable.Invoke(line.Split("|"), fileResult, provider);
+                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, provider);
                                     }
                                     break;
                             }
@@ -197,40 +210,60 @@ static Task generateResult(string directory, Provider provider)
                 }
                 break;
             default:
-                throw new NotImplementedException();
+                throw new NotImplementedException($"Provider=Unknown");
         }
 
         File.WriteAllLines($"Results{Path.DirectorySeparatorChar}Result_{directory.Split(Path.DirectorySeparatorChar)[1]}.csv", new[] { result.ToString() }, Encoding.UTF8);
     });
 }
 
-static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Provider provider)
+static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Provider provider)
 {
+    string? product = null;
+
     switch (provider)
     {
         case Provider.Jees:
-            throw new NotImplementedException();
+            throw new NotImplementedException($"Provider=Jees");
         case Provider.Lanyee:
-            throw new NotImplementedException();
+            throw new NotImplementedException($"Provider=Lanyee");
         case Provider.Rohon:
             fileResult.AppendLine($"\"{columns[3]}\",\"{columns[6]}\",\"{columns[7]}\",\"{columns[11]}\"");
+            product = InstrumentToProductRegex().Replace(columns[3], "");
+            if (!profitOrLoss.ContainsKey(product))
+            {
+                profitOrLoss.Add(product, decimal.Parse(columns[11]));
+            }
+            else
+            {
+                profitOrLoss[product] += decimal.Parse(columns[11]);
+            }
             break;
         case Provider.Shinny:
             fileResult.AppendLine($"\"{columns[6]}\",\"{columns[9]}\",\"{columns[10]}\",\"{columns[14]}\"");
+            product = InstrumentToProductRegex().Replace(columns[6], "");
+            if (!profitOrLoss.ContainsKey(product))
+            {
+                profitOrLoss.Add(product, decimal.Parse(columns[14]));
+            }
+            else
+            {
+                profitOrLoss[product] += decimal.Parse(columns[14]);
+            }
             break;
         default:
-            throw new NotImplementedException();
+            throw new NotImplementedException($"Provider=Unknown");
     }
 }
 
-static void ParsePositions(string[] columns, StringBuilder fileResult, Provider provider)
+static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Provider provider)
 {
     switch (provider)
     {
         case Provider.Jees:
-            throw new NotImplementedException();
+            throw new NotImplementedException($"Provider=Jees");
         case Provider.Lanyee:
-            throw new NotImplementedException();
+            throw new NotImplementedException($"Provider=Lanyee");
         case Provider.Rohon:
             fileResult.AppendLine($"\"{columns[1]}\",\"{columns[3]}\",\"{columns[5]}\",\"{columns[8]}\",\"{columns[9]}\"");
             break;
@@ -238,13 +271,16 @@ static void ParsePositions(string[] columns, StringBuilder fileResult, Provider 
             fileResult.AppendLine($"\"{columns[4]}\",\"{columns[5]}\",\"{columns[7]}\",\"{columns[10]}\",\"{columns[11]}\"");
             break;
         default:
-            throw new NotImplementedException();
+            throw new NotImplementedException($"Provider=Unknown");
     }
 }
+
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 Directory.CreateDirectory("Results");
 Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}PositionClosed");
 Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}Positions");
+Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}ProfitOrLoss");
 
 List<Task>? tasks = new();
 
@@ -273,4 +309,10 @@ internal enum Provider
     Shinny,
 }
 
-internal delegate void ParseTable(string[] columns, StringBuilder fileResult, Provider provider);
+internal delegate void ParseTable(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Provider provider);
+
+partial class Program
+{
+    [GeneratedRegex("[0-9]")]
+    private static partial Regex InstrumentToProductRegex();
+}
