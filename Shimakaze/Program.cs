@@ -2,19 +2,20 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-static Task generateResult(string directory, Provider provider)
+static Task generateResult(string directory, Providers provider)
 {
     return Task.Run(() =>
     {
-        _ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}PositionClosed{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
-        _ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
-        _ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
+        foreach (var resultDir in Enum.GetNames<Results>())
+        {
+            _ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}{resultDir}{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}");
+        }
 
         StringBuilder result = new();
 
         switch (provider)
         {
-            case Provider.Jees:
+            case Providers.Jees:
                 foreach (var file in Directory.EnumerateFiles(directory).Where(s => s.Split(Path.DirectorySeparatorChar)[2].StartsWith("结算单_")))
                 {
                     Console.WriteLine($"Task={Task.CurrentId}, file={file}, Thread={Environment.CurrentManagedThreadId}");
@@ -54,9 +55,9 @@ static Task generateResult(string directory, Provider provider)
                     _ = result.AppendLine();
                 }
                 break;
-            case Provider.Lanyee:
-                throw new NotImplementedException($"Provider=Lanyee");
-            case Provider.Rohon:
+            case Providers.Lanyee:
+                throw new NotImplementedException($"Providers=Lanyee");
+            case Providers.Rohon:
                 foreach (var file in Directory.EnumerateFiles(directory).Where(s => s.Split(Path.DirectorySeparatorChar)[2].StartsWith("20")))
                 {
                     Console.WriteLine($"Task={Task.CurrentId}, file={file}, Thread={Environment.CurrentManagedThreadId}");
@@ -65,7 +66,7 @@ static Task generateResult(string directory, Provider provider)
                     StringBuilder? fileResult = null;
                     StringBuilder positionClosed = new(), positions = new();
                     ParseTable? parseTable = null;
-                    Dictionary<string, decimal> profitOrLoss = new();
+                    Dictionary<string, decimal> profitOrLoss = new(), riskExposure = new();
 
                     foreach (var line in File.ReadLines(file, Encoding.GetEncoding("GB18030")).Select(s => s.Replace(" ", "")))
                     {
@@ -115,7 +116,7 @@ static Task generateResult(string directory, Provider provider)
                                 default:
                                     if (fileResult != null && parseTable != null)
                                     {
-                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, provider);
+                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, riskExposure, provider);
                                     }
                                     break;
                             }
@@ -124,12 +125,13 @@ static Task generateResult(string directory, Provider provider)
 
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}PositionClosed{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}PositionClosed_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", new[] { positionClosed.ToString() }, Encoding.UTF8);
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}Positions_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", new[] { positions.ToString() }, Encoding.UTF8);
-                    File.WriteAllLines($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}ProfitOrLoss_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", profitOrLoss.Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
+                    File.WriteAllLines($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}ProfitOrLoss_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", profitOrLoss.OrderByDescending(s => s.Value).Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
+                    File.WriteAllLines($"Results{Path.DirectorySeparatorChar}RiskExposure{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}RiskExposure_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", riskExposure.OrderByDescending(s => s.Value).Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
 
                     _ = result.AppendLine();
                 }
                 break;
-            case Provider.Shinny:
+            case Providers.Shinny:
                 foreach (var file in Directory.EnumerateFiles(directory).Where(s => s.Split(Path.DirectorySeparatorChar)[2].StartsWith("结算单_")))
                 {
                     Console.WriteLine($"Task={Task.CurrentId}, file={file}, Thread={Environment.CurrentManagedThreadId}");
@@ -138,7 +140,7 @@ static Task generateResult(string directory, Provider provider)
                     StringBuilder? fileResult = null;
                     StringBuilder positionClosed = new(), positions = new();
                     ParseTable? parseTable = null;
-                    Dictionary<string, decimal> profitOrLoss = new();
+                    Dictionary<string, decimal> profitOrLoss = new(), riskExposure = new();
 
                     foreach (var line in File.ReadAllLines(file, Encoding.GetEncoding("GB18030")).Select(s => s.Replace(" ", "")))
                     {
@@ -193,7 +195,7 @@ static Task generateResult(string directory, Provider provider)
                                 default:
                                     if (fileResult != null && parseTable != null)
                                     {
-                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, provider);
+                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, riskExposure, provider);
                                     }
                                     break;
                             }
@@ -202,29 +204,31 @@ static Task generateResult(string directory, Provider provider)
 
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}PositionClosed{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}PositionClosed_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", new[] { positionClosed.ToString() }, Encoding.UTF8);
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}Positions_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", new[] { positions.ToString() }, Encoding.UTF8);
+                    File.WriteAllLines($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}ProfitOrLoss_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", profitOrLoss.OrderByDescending(s => s.Value).Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
+                    File.WriteAllLines($"Results{Path.DirectorySeparatorChar}RiskExposure{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[1]}{Path.DirectorySeparatorChar}RiskExposure_{directory.Split(Path.DirectorySeparatorChar)[1]}_{date}.csv", riskExposure.OrderByDescending(s => s.Value).Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
 
                     _ = result.AppendLine();
                 }
                 break;
             default:
-                throw new NotImplementedException($"Provider=Unknown");
+                throw new NotImplementedException($"Providers=Unknown");
         }
 
         File.WriteAllLines($"Results{Path.DirectorySeparatorChar}Result_{directory.Split(Path.DirectorySeparatorChar)[1]}.csv", new[] { result.ToString() }, Encoding.UTF8);
     });
 }
 
-static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Provider provider)
+static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, Providers provider)
 {
     string? product = null;
 
     switch (provider)
     {
-        case Provider.Jees:
-            throw new NotImplementedException($"Provider=Jees");
-        case Provider.Lanyee:
-            throw new NotImplementedException($"Provider=Lanyee");
-        case Provider.Rohon:
+        case Providers.Jees:
+            throw new NotImplementedException($"Providers=Jees");
+        case Providers.Lanyee:
+            throw new NotImplementedException($"Providers=Lanyee");
+        case Providers.Rohon:
             _ = fileResult.AppendLine($"\"{columns[3]}\",\"{columns[6]}\",\"{columns[7]}\",\"{columns[11]}\"");
             product = InstrumentToProductRegex().Replace(columns[3], "");
             if (!profitOrLoss.ContainsKey(product))
@@ -236,7 +240,7 @@ static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dict
                 profitOrLoss[product] += decimal.Parse(columns[11]);
             }
             break;
-        case Provider.Shinny:
+        case Providers.Shinny:
             _ = fileResult.AppendLine($"\"{columns[6]}\",\"{columns[9]}\",\"{columns[10]}\",\"{columns[14]}\"");
             product = InstrumentToProductRegex().Replace(columns[6], "");
             if (!profitOrLoss.ContainsKey(product))
@@ -249,66 +253,116 @@ static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dict
             }
             break;
         default:
-            throw new NotImplementedException($"Provider=Unknown");
+            throw new NotImplementedException($"Providers=Unknown");
     }
 }
 
-static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Provider provider)
+static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, Providers provider)
 {
+    string? product = null;
+
     switch (provider)
     {
-        case Provider.Jees:
-            throw new NotImplementedException($"Provider=Jees");
-        case Provider.Lanyee:
-            throw new NotImplementedException($"Provider=Lanyee");
-        case Provider.Rohon:
-            _ = fileResult.AppendLine($"\"{columns[1]}\",\"{columns[3]}\",\"{columns[5]}\",\"{columns[8]}\",\"{columns[9]}\"");
+        case Providers.Jees:
+            throw new NotImplementedException($"Providers=Jees");
+        case Providers.Lanyee:
+            throw new NotImplementedException($"Providers=Lanyee");
+        case Providers.Rohon:
+            _ = fileResult.AppendLine($"\"{columns[1]}\",\"{columns[3]}\",\"{columns[4]}\",\"{columns[5]}\",\"{columns[6]}\",\"{columns[8]}\",\"{columns[9]}\"");
+
+            product = InstrumentToProductRegex().Replace(columns[1], "");
+
+            if (!profitOrLoss.ContainsKey(product))
+            {
+                profitOrLoss.Add(product, decimal.Parse(columns[9]));
+            }
+            else
+            {
+                profitOrLoss[product] += decimal.Parse(columns[9]);
+            }
+
+            if (!riskExposure.ContainsKey(product))
+            {
+                riskExposure.Add(product, (decimal.Parse(columns[3]) * decimal.Parse(columns[4])) - (decimal.Parse(columns[5]) * decimal.Parse(columns[6])));
+            }
+            else
+            {
+                riskExposure[product] += (decimal.Parse(columns[3]) * decimal.Parse(columns[4])) - (decimal.Parse(columns[5]) * decimal.Parse(columns[6]));
+            }
             break;
-        case Provider.Shinny:
-            _ = fileResult.AppendLine($"\"{columns[4]}\",\"{columns[5]}\",\"{columns[7]}\",\"{columns[10]}\",\"{columns[11]}\"");
+        case Providers.Shinny:
+            _ = fileResult.AppendLine($"\"{columns[4]}\",\"{columns[5]}\",\"{columns[6]}\",\"{columns[7]}\",\"{columns[8]}\",\"{columns[10]}\",\"{columns[11]}\"");
+
+            product = InstrumentToProductRegex().Replace(columns[4], "");
+
+            if (!profitOrLoss.ContainsKey(product))
+            {
+                profitOrLoss.Add(product, decimal.Parse(columns[11]));
+            }
+            else
+            {
+                profitOrLoss[product] += decimal.Parse(columns[11]);
+            }
+
+            if (!riskExposure.ContainsKey(product))
+            {
+                riskExposure.Add(product, (decimal.Parse(columns[5]) * decimal.Parse(columns[6])) - (decimal.Parse(columns[7]) * decimal.Parse(columns[8])));
+            }
+            else
+            {
+                riskExposure[product] += (decimal.Parse(columns[5]) * decimal.Parse(columns[6])) - (decimal.Parse(columns[7]) * decimal.Parse(columns[8]));
+            }
             break;
         default:
-            throw new NotImplementedException($"Provider=Unknown");
+            throw new NotImplementedException($"Providers=Unknown");
     }
 }
 
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
 _ = Directory.CreateDirectory("Results");
-_ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}PositionClosed");
-_ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}Positions");
-_ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}ProfitOrLoss");
+
+foreach (var result in Enum.GetNames<Results>())
+{
+    _ = Directory.CreateDirectory($"Results{Path.DirectorySeparatorChar}{result}");
+}
 
 List<Task>? tasks = new();
 
-foreach (var directory in Directory.EnumerateDirectories("Jees_交易结算"))
+foreach (var provider in Enum.GetNames<Providers>())
 {
-    tasks.Add(generateResult(directory, Provider.Jees));
-}
+    var providerEnum = Enum.Parse<Providers>(provider);
 
-foreach (var directory in Directory.EnumerateDirectories("Rohon_交易核算单(盯市)"))
-{
-    tasks.Add(generateResult(directory, Provider.Rohon));
-}
-
-foreach (var directory in Directory.EnumerateDirectories("Shinny_交易结算单(盯市)"))
-{
-    tasks.Add(generateResult(directory, Provider.Shinny));
+    if (providerEnum != Providers.Lanyee)
+    {
+        foreach (var directory in Directory.EnumerateDirectories($"{provider}_交易结算"))
+        {
+            tasks.Add(generateResult(directory, providerEnum));
+        }
+    }
 }
 
 await Task.WhenAll(tasks);
 
-internal enum Provider
+internal enum Providers
 {
     Jees,
     Lanyee,
     Rohon,
-    Shinny,
+    Shinny
 }
 
-internal delegate void ParseTable(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Provider provider);
+internal enum Results
+{
+    PositionClosed,
+    Positions,
+    ProfitOrLoss,
+    RiskExposure
+}
 
-partial class Program
+internal delegate void ParseTable(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, Providers provider);
+
+internal partial class Program
 {
     [GeneratedRegex("[0-9]")]
     private static partial Regex InstrumentToProductRegex();
