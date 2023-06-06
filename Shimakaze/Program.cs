@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-static Task generateResult(string directory, Providers provider)
+static Task GenerateResult(string directory, Providers provider)
 {
     return Task.Run(() =>
     {
@@ -281,13 +281,16 @@ static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionar
                 profitOrLoss[product] += decimal.Parse(columns[9]);
             }
 
-            if (!riskExposure.ContainsKey(product))
+            if (product is not "TL" and not "T" and not "TF" and not "TS")
             {
-                riskExposure.Add(product, (decimal.Parse(columns[3]) * decimal.Parse(columns[4])) - (decimal.Parse(columns[5]) * decimal.Parse(columns[6])));
-            }
-            else
-            {
-                riskExposure[product] += (decimal.Parse(columns[3]) * decimal.Parse(columns[4])) - (decimal.Parse(columns[5]) * decimal.Parse(columns[6]));
+                if (!riskExposure.ContainsKey(product))
+                {
+                    riskExposure.Add(product, ((decimal.Parse(columns[3]) * decimal.Parse(columns[4])) - (decimal.Parse(columns[5]) * decimal.Parse(columns[6]))) * tradingUnit[product.ToUpper()]);
+                }
+                else
+                {
+                    riskExposure[product] += ((decimal.Parse(columns[3]) * decimal.Parse(columns[4])) - (decimal.Parse(columns[5]) * decimal.Parse(columns[6]))) * tradingUnit[product.ToUpper()];
+                }
             }
             break;
         case Providers.Shinny:
@@ -304,13 +307,16 @@ static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionar
                 profitOrLoss[product] += decimal.Parse(columns[11]);
             }
 
-            if (!riskExposure.ContainsKey(product))
+            if (product is not "TL" and not "T" and not "TF" and not "TS")
             {
-                riskExposure.Add(product, (decimal.Parse(columns[5]) * decimal.Parse(columns[6])) - (decimal.Parse(columns[7]) * decimal.Parse(columns[8])));
-            }
-            else
-            {
-                riskExposure[product] += (decimal.Parse(columns[5]) * decimal.Parse(columns[6])) - (decimal.Parse(columns[7]) * decimal.Parse(columns[8]));
+                if (!riskExposure.ContainsKey(product))
+                {
+                    riskExposure.Add(product, ((decimal.Parse(columns[5]) * decimal.Parse(columns[6])) - (decimal.Parse(columns[7]) * decimal.Parse(columns[8]))) * tradingUnit[product.ToUpper()]);
+                }
+                else
+                {
+                    riskExposure[product] += ((decimal.Parse(columns[5]) * decimal.Parse(columns[6])) - (decimal.Parse(columns[7]) * decimal.Parse(columns[8]))) * tradingUnit[product.ToUpper()];
+                }
             }
             break;
         default:
@@ -339,7 +345,7 @@ foreach (var provider in Enum.GetNames<Providers>())
         {
             foreach (var subdirectory in Directory.EnumerateDirectories(directory))
             {
-                tasks.Add(generateResult(subdirectory, providerEnum));
+                tasks.Add(GenerateResult(subdirectory, providerEnum));
             }
         }
     }
@@ -369,4 +375,54 @@ internal partial class Program
 {
     [GeneratedRegex("[0-9]")]
     private static partial Regex InstrumentToProductRegex();
+
+    private static Dictionary<string, decimal> tradingUnit = new()
+    {
+        { "A", 10 },
+        { "AG", 15 },
+        { "AL", 5 },
+        { "AP", 10 },
+        { "AU", 1000 },
+        { "BU", 10 },
+        { "C", 10 },
+        { "CF", 5 },
+        { "CS", 10 },
+        { "CU", 5 },
+        { "FG", 20 },
+        { "FU", 10 },
+        { "HC", 10 },
+        { "I", 100 },
+        { "IC", 200 },
+        { "IF", 300 },
+        { "IH", 300 },
+        { "IM", 200 },
+        { "J", 100 },
+        { "JD", 10 },
+        { "JM", 60 },
+        { "L", 5 },
+        { "M", 10 },
+        { "MA", 10 },
+        { "NI", 1 },
+        { "OI", 10 },
+        { "P", 10 },
+        { "PB", 5 },
+        { "PK", 5 },
+        { "PP", 5 },
+        { "RB", 10 },
+        { "RM", 10 },
+        { "RU", 10 },
+        { "SF", 5 },
+        { "SM", 5 },
+        { "SN", 1 },
+        { "SR", 10 },
+        { "T", 1000000 },
+        { "TA", 5 },
+        { "TF", 1000000 },
+        { "TS", 2000000 },
+        { "TL", 1000000 },
+        { "V", 5 },
+        { "Y", 10 },
+        { "ZC", 100 },
+        { "ZN", 5 }
+    };
 }
