@@ -24,14 +24,14 @@ static Task GenerateResult(string directory, Providers provider)
                     {
                         if (line.StartsWith("客户号："))
                         {
-                            if (line.Split(new[] { "客户号：" }, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[2].Split("_")[^1])
+                            if (line.Split(separatorArray0, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[2].Split("_")[^1])
                             {
                                 throw new InvalidOperationException($"File={file}");
                             }
                         }
                         if (line.StartsWith("日期："))
                         {
-                            var date = line.Split(new[] { "日期：" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                            var date = line.Split(separatorArray1, StringSplitOptions.RemoveEmptyEntries)[0];
                             _ = result.Append($"\"{date}\"");
                             if (date != file.Split(Path.DirectorySeparatorChar)[3].Split(".")[0].Split("_")[^1])
                             {
@@ -40,16 +40,16 @@ static Task GenerateResult(string directory, Providers provider)
                         }
                         if (line.StartsWith("交易日："))
                         {
-                            _ = result.Append($",\"{line.Split(new[] { "交易日：" }, StringSplitOptions.RemoveEmptyEntries)[0]}\"");
+                            _ = result.Append($",\"{line.Split(separatorArray2, StringSplitOptions.RemoveEmptyEntries)[0]}\"");
                         }
                         if (line.StartsWith("出入金Deposit/Withdrawal："))
                         {
-                            var columns = line.Split(new[] { "出入金Deposit/Withdrawal：", "期末结存Balancec/f：" }, StringSplitOptions.RemoveEmptyEntries);
+                            var columns = line.Split(separatorArray3, StringSplitOptions.RemoveEmptyEntries);
                             _ = result.Append($",\"{columns[0]}\",\"{columns[1]}\"");
                         }
                         if (line.StartsWith("权利金收入Premiumreceived："))
                         {
-                            _ = result.Append($",\"{line.Split(new[] { "权利金收入Premiumreceived：", "风险度RiskDegree：" }, StringSplitOptions.RemoveEmptyEntries)[1]}\"");
+                            _ = result.Append($",\"{line.Split(separatorArray4, StringSplitOptions.RemoveEmptyEntries)[1]}\"");
                         }
                     }
                     _ = result.AppendLine();
@@ -72,14 +72,30 @@ static Task GenerateResult(string directory, Providers provider)
                     {
                         if (line.StartsWith("客户号："))
                         {
-                            if (line.Split(new[] { "客户号：", "客户名称：" }, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[2].Split("_")[^1])
+                            if (line.Split(separatorArray5, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[2].Split("_")[^1])
+                            {
+                                throw new InvalidOperationException($"File={file}");
+                            }
+                        }
+                        if (line.StartsWith("客户号ClientID:"))
+                        {
+                            if (line.Split(separatorArray6, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[2].Split("_")[^1])
                             {
                                 throw new InvalidOperationException($"File={file}");
                             }
                         }
                         if (line.StartsWith("日期："))
                         {
-                            date = line.Split(new[] { "日期：" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                            date = line.Split(separatorArray7, StringSplitOptions.RemoveEmptyEntries)[0];
+                            _ = result.Append($"\"{date}\"");
+                            if (date != file.Split(Path.DirectorySeparatorChar)[3].Split(".")[0].Split("_")[^1])
+                            {
+                                throw new InvalidOperationException($"File={file}");
+                            }
+                        }
+                        if (line.StartsWith("日期Date:"))
+                        {
+                            date = line.Split(separatorArray8, StringSplitOptions.RemoveEmptyEntries)[0];
                             _ = result.Append($"\"{date}\"");
                             if (date != file.Split(Path.DirectorySeparatorChar)[3].Split(".")[0].Split("_")[^1])
                             {
@@ -88,28 +104,50 @@ static Task GenerateResult(string directory, Providers provider)
                         }
                         if (line.StartsWith("出入金："))
                         {
-                            var columns = line.Split(new[] { "出入金：", "期末结存：", "可用资金：" }, StringSplitOptions.RemoveEmptyEntries);
+                            var columns = line.Split(separatorArray9, StringSplitOptions.RemoveEmptyEntries);
+                            _ = result.Append($",\"{columns[0]}\",\"{columns[1]}\"");
+                        }
+                        if (line.StartsWith("出入金Deposit/Withdrawal:"))
+                        {
+                            var columns = line.Split(separatorArray10, StringSplitOptions.RemoveEmptyEntries);
                             _ = result.Append($",\"{columns[0]}\",\"{columns[1]}\"");
                         }
                         if (line.StartsWith("平仓盈亏："))
                         {
-                            _ = result.Append($",\"{line.Split(new[] { "平仓盈亏：", "质押金：", "风险度：" }, StringSplitOptions.RemoveEmptyEntries)[2]}\"");
+                            _ = result.Append($",\"{line.Split(separatorArray11, StringSplitOptions.RemoveEmptyEntries)[2]}\"");
+                        }
+                        if (line.StartsWith("权利金收入premiumreceived:"))
+                        {
+                            _ = result.Append($",\"{line.Split(separatorArray12, StringSplitOptions.RemoveEmptyEntries)[1]}\"");
                         }
                         if (line.StartsWith("|") && !line.StartsWith("|共"))
                         {
                             switch (line)
                             {
+                                case string when line.StartsWith("|发生日期|出入金类型|入金|出金|说明|"):
+                                case string when line.StartsWith("|Date|Type|Deposit|Withdrawal|Note|"):
                                 case string when line.StartsWith("|成交日期|交易所|品种|交割期|买卖|投保|成交价|手数|成交额|开平|手续费|平仓盈亏|成交序号|成交时间|"):
+                                case string when line.StartsWith("|成交日期|交易所|品种|合约|买/卖|投/保|成交价|手数|成交额|开平|手续费|平仓盈亏|权利金收支|成交序号|成交类型|"):
+                                case string when line.StartsWith("|Date|Exchange|Product|Instrument|B/S|S/H|Price|Lots|Turnover|O/C|Fee|RealizedP/L|PremiumReceived/Paid|Trans.No.|TradeType|"):
                                 case string when line.StartsWith("|交割日期|交易所|品种|合约|投/保|买/卖|是否行权|行权数量|行权价格|行权金额|行权盈亏|行权手续费|"):
+                                case string when line.StartsWith("|Date|Exchange|Product|Instrument|S/H|B/S|Exercise/Abandon|VolumeExercised|ExercisePrice|AmountExercised|ExerciseP/L|ExerciseFee|"):
+                                case string when line.StartsWith("|交割日期|交易所|品种|交割期|投/保|买/卖|实提数量|剩余数量|交割价格|交割金额|交割手续费|开仓均价|交割盈亏|"):
+                                case string when line.StartsWith("|Date|Exchange|Product|Del.Mth|S/H|B/S|DeliveredQty|Residual|DeliveryPrice|DeliveryAmount|DeliveryFee|AvgOpeningPrice|RealizedP/LatDelivery|"):
                                 case string when line.StartsWith("|交易所|合约代码|交割期|开仓日期|投/保|买/卖|持仓量|开仓价|昨结算价|今结算价|浮动盈亏|盯市盈亏|保证金|"):
+                                case string when line.StartsWith("|交易所|品种|合约|开仓日期|投/保|买/卖|持仓量|开仓价|昨结算|结算价|浮动盈亏|盯市盈亏|保证金|期权市值|"):
+                                case string when line.StartsWith("|Exchange|Product|Instrument|OpenDate|S/H|B/S|Positon|Pos.OpenPrice|Prev.Sttl|SettlementPrice|Accum.P/L|MTMP/L|Margin|MarketValue(Options)|"):
+                                case string when line.StartsWith("|平仓日期|交易所|品种|合约|开仓日期|买/卖|手数|开仓价|昨结算|成交价|平仓盈亏|权利金收支|"):
+                                case string when line.StartsWith("|品种|合约|买持|买均价|卖持|卖均价|昨结算|今结算|持仓盯市盈亏|保证金占用|投保|多头期权市值|空头期权市值|"):
                                     fileResult = null;
                                     parseTable = null;
                                     break;
                                 case string when line.StartsWith("|平仓日期|交易所|品种|交割期|开仓日期|买/卖|手数|开仓价|昨核算|成交价|平仓盈亏|"):
+                                case string when line.StartsWith("|CloseDate|Exchange|Product|Instrument|OpenDate|B/S|Lots|Pos.OpenPrice|Prev.Sttl|Trans.Price|RealizedP/L|PremiumReceived/Paid|"):
                                     fileResult = positionClosed;
                                     parseTable = ParsePositionClosed;
                                     break;
                                 case string when line.StartsWith("|合约代码|交割期|买持|买均价|卖持|卖均价|昨结算价|今结算价|持仓盯市盈亏|保证金占用|投/保|"):
+                                case string when line.StartsWith("|Product|Instrument|LongPos.|AvgBuyPrice|ShortPos.|AvgSellPrice|Prev.Sttl|SttlToday|MTMP/L|MarginOccupied|S/H|MarketValue(Long)|MarketValue(Short)|"):
                                     fileResult = positions;
                                     parseTable = ParsePositions;
                                     break;
@@ -146,14 +184,14 @@ static Task GenerateResult(string directory, Providers provider)
                     {
                         if (line.StartsWith("客户号ClientID："))
                         {
-                            if (line.Split(new[] { "客户号ClientID：", "客户名称ClientName：" }, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[2].Split("_")[^1])
+                            if (line.Split(separatorArray13, StringSplitOptions.RemoveEmptyEntries)[0] != file.Split(Path.DirectorySeparatorChar)[2].Split("_")[^1])
                             {
                                 throw new InvalidOperationException($"File={file}");
                             }
                         }
                         if (line.StartsWith("日期Date："))
                         {
-                            date = line.Split(new[] { "日期Date：" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                            date = line.Split(separatorArray14, StringSplitOptions.RemoveEmptyEntries)[0];
                             _ = result.Append($"\"{date}\"");
                             if (date != file.Split(Path.DirectorySeparatorChar)[3].Split(".")[0].Split("_")[^1])
                             {
@@ -162,12 +200,12 @@ static Task GenerateResult(string directory, Providers provider)
                         }
                         if (line.StartsWith("出入金Deposit/Withdrawal："))
                         {
-                            var columns = line.Split(new[] { "出入金Deposit/Withdrawal：", "期末结存Balancec/f：" }, StringSplitOptions.RemoveEmptyEntries);
+                            var columns = line.Split(separatorArray15, StringSplitOptions.RemoveEmptyEntries);
                             _ = result.Append($",\"{columns[0]}\",\"{columns[1]}\"");
                         }
                         if (line.StartsWith("权利金收入Premiumreceived："))
                         {
-                            _ = result.Append($",\"{line.Split(new[] { "权利金收入Premiumreceived：", "风险度RiskDegree：" }, StringSplitOptions.RemoveEmptyEntries)[1]}\"");
+                            _ = result.Append($",\"{line.Split(separatorArray16, StringSplitOptions.RemoveEmptyEntries)[1]}\"");
                         }
                         if (line.StartsWith("|") && !line.StartsWith("|共"))
                         {
@@ -229,7 +267,7 @@ static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dict
         case Providers.Lanyee:
             throw new NotImplementedException($"Providers={Providers.Lanyee}");
         case Providers.Rohon:
-            _ = fileResult.AppendLine($"\"{columns[3]}\",\"{columns[6]}\",\"{columns[7]}\",\"{columns[11]}\"");
+            _ = fileResult.AppendLine($"\"{columns[3]}\",\"{columns[4]}\",\"{columns[6]}\",\"{columns[7]}\",\"{columns[11]}\"");
             product = InstrumentToProductRegex().Replace(columns[3], "");
             if (!profitOrLoss.ContainsKey(product))
             {
@@ -268,7 +306,7 @@ static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionar
         case Providers.Lanyee:
             throw new NotImplementedException($"Providers={Providers.Lanyee}");
         case Providers.Rohon:
-            _ = fileResult.AppendLine($"\"{columns[1]}\",\"{columns[3]}\",\"{columns[4]}\",\"{columns[5]}\",\"{columns[6]}\",\"{columns[8]}\",\"{columns[9]}\"");
+            _ = fileResult.AppendLine($"\"{columns[1]}\",\"{columns[2]}\",\"{columns[3]}\",\"{columns[4]}\",\"{columns[5]}\",\"{columns[6]}\",\"{columns[8]}\",\"{columns[9]}\"");
 
             product = InstrumentToProductRegex().Replace(columns[1], "");
 
@@ -425,4 +463,22 @@ internal partial class Program
         { "ZC", 100 },
         { "ZN", 5 }
     };
+
+    private static readonly string[] separatorArray0 = new[] { "客户号：" };
+    private static readonly string[] separatorArray1 = new[] { "日期：" };
+    private static readonly string[] separatorArray2 = new[] { "交易日：" };
+    private static readonly string[] separatorArray3 = new[] { "出入金Deposit/Withdrawal：", "期末结存Balancec/f：" };
+    private static readonly string[] separatorArray4 = new[] { "权利金收入Premiumreceived：", "风险度RiskDegree：" };
+    private static readonly string[] separatorArray5 = new[] { "客户号：", "客户名称：" };
+    private static readonly string[] separatorArray6 = new[] { "客户号ClientID:", "客户名称ClientName:" };
+    private static readonly string[] separatorArray7 = new[] { "日期：" };
+    private static readonly string[] separatorArray8 = new[] { "日期Date:" };
+    private static readonly string[] separatorArray9 = new[] { "出入金：", "期末结存：", "可用资金：" };
+    private static readonly string[] separatorArray10 = new[] { "出入金Deposit/Withdrawal:", "期末结存Balancec/f:" };
+    private static readonly string[] separatorArray11 = new[] { "平仓盈亏：", "质押金：", "风险度：" };
+    private static readonly string[] separatorArray12 = new[] { "权利金收入premiumreceived:", "风险度RiskDegree:" };
+    private static readonly string[] separatorArray13 = new[] { "客户号ClientID：", "客户名称ClientName：" };
+    private static readonly string[] separatorArray14 = new[] { "日期Date：" };
+    private static readonly string[] separatorArray15 = new[] { "出入金Deposit/Withdrawal：", "期末结存Balancec/f：" };
+    private static readonly string[] separatorArray16 = new[] { "权利金收入Premiumreceived：", "风险度RiskDegree：" };
 }
