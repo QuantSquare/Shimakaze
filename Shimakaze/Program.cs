@@ -64,7 +64,7 @@ static Task GenerateResult(string directory, Providers provider)
 
                     string? date = null;
                     StringBuilder? fileResult = null;
-                    StringBuilder positionClosed = new(), positions = new();
+                    StringBuilder positionClosed = new(), positions = new(), errorLog = new();
                     ParseTable? parseTable = null;
                     Dictionary<string, decimal> profitOrLoss = new(), riskExposure = new();
 
@@ -154,7 +154,7 @@ static Task GenerateResult(string directory, Providers provider)
                                 default:
                                     if (fileResult != null && parseTable != null)
                                     {
-                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, riskExposure, provider);
+                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, riskExposure, errorLog, provider);
                                     }
                                     break;
                             }
@@ -165,6 +165,7 @@ static Task GenerateResult(string directory, Providers provider)
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[2]}{Path.DirectorySeparatorChar}Positions_{directory.Split(Path.DirectorySeparatorChar)[2]}_{date}.csv", new[] { positions.ToString() }, Encoding.UTF8);
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[2]}{Path.DirectorySeparatorChar}ProfitOrLoss_{directory.Split(Path.DirectorySeparatorChar)[2]}_{date}.csv", profitOrLoss.OrderByDescending(s => s.Value).Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}RiskExposure{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[2]}{Path.DirectorySeparatorChar}RiskExposure_{directory.Split(Path.DirectorySeparatorChar)[2]}_{date}.csv", riskExposure.OrderByDescending(s => s.Value).Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
+                    File.WriteAllLines($"Results{Path.DirectorySeparatorChar}ErrorLog{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[2]}{Path.DirectorySeparatorChar}ErrorLog_{directory.Split(Path.DirectorySeparatorChar)[2]}_{date}.log", new[] { errorLog.ToString() }, Encoding.UTF8);
 
                     _ = result.AppendLine();
                 }
@@ -176,7 +177,7 @@ static Task GenerateResult(string directory, Providers provider)
 
                     string? date = null;
                     StringBuilder? fileResult = null;
-                    StringBuilder positionClosed = new(), positions = new();
+                    StringBuilder positionClosed = new(), positions = new(), errorLog = new();
                     ParseTable? parseTable = null;
                     Dictionary<string, decimal> profitOrLoss = new(), riskExposure = new();
 
@@ -233,7 +234,7 @@ static Task GenerateResult(string directory, Providers provider)
                                 default:
                                     if (fileResult != null && parseTable != null)
                                     {
-                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, riskExposure, provider);
+                                        parseTable.Invoke(line.Split("|"), fileResult, profitOrLoss, riskExposure, errorLog, provider);
                                     }
                                     break;
                             }
@@ -244,6 +245,7 @@ static Task GenerateResult(string directory, Providers provider)
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}Positions{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[2]}{Path.DirectorySeparatorChar}Positions_{directory.Split(Path.DirectorySeparatorChar)[2]}_{date}.csv", new[] { positions.ToString() }, Encoding.UTF8);
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}ProfitOrLoss{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[2]}{Path.DirectorySeparatorChar}ProfitOrLoss_{directory.Split(Path.DirectorySeparatorChar)[2]}_{date}.csv", profitOrLoss.OrderByDescending(s => s.Value).Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
                     File.WriteAllLines($"Results{Path.DirectorySeparatorChar}RiskExposure{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[2]}{Path.DirectorySeparatorChar}RiskExposure_{directory.Split(Path.DirectorySeparatorChar)[2]}_{date}.csv", riskExposure.OrderByDescending(s => s.Value).Select(s => $"\"{s.Key}\",\"{s.Value}\""), Encoding.UTF8);
+                    File.WriteAllLines($"Results{Path.DirectorySeparatorChar}ErrorLog{Path.DirectorySeparatorChar}{directory.Split(Path.DirectorySeparatorChar)[2]}{Path.DirectorySeparatorChar}ErrorLog_{directory.Split(Path.DirectorySeparatorChar)[2]}_{date}.log", new[] { errorLog.ToString() }, Encoding.UTF8);
 
                     _ = result.AppendLine();
                 }
@@ -256,7 +258,7 @@ static Task GenerateResult(string directory, Providers provider)
     });
 }
 
-static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, Providers provider)
+static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, StringBuilder _, Providers provider)
 {
     string? product = null;
 
@@ -295,7 +297,7 @@ static void ParsePositionClosed(string[] columns, StringBuilder fileResult, Dict
     }
 }
 
-static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, Providers provider)
+static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, StringBuilder errorLog, Providers provider)
 {
     string? product = null;
 
@@ -307,6 +309,10 @@ static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionar
             throw new NotImplementedException($"Providers={Providers.Lanyee}");
         case Providers.Rohon:
             _ = fileResult.AppendLine($"\"{columns[1]}\",\"{columns[2]}\",\"{columns[3]}\",\"{columns[4]}\",\"{columns[5]}\",\"{columns[6]}\",\"{columns[8]}\",\"{columns[9]}\"");
+            if (int.Parse(columns[3]) != 0 && int.Parse(columns[5]) != 0)
+            {
+                errorLog.AppendLine($"Holding opposite positions under \"{columns[1]}\" \"{columns[2]}\"");
+            }
 
             product = InstrumentToProductRegex().Replace(columns[1], "");
 
@@ -333,6 +339,10 @@ static void ParsePositions(string[] columns, StringBuilder fileResult, Dictionar
             break;
         case Providers.Shinny:
             _ = fileResult.AppendLine($"\"{columns[4]}\",\"{columns[5]}\",\"{columns[6]}\",\"{columns[7]}\",\"{columns[8]}\",\"{columns[10]}\",\"{columns[11]}\"");
+            if (int.Parse(columns[5]) != 0 && int.Parse(columns[7]) != 0)
+            {
+                errorLog.AppendLine($"Holding opposite positions under \"{columns[4]}\"");
+            }
 
             product = InstrumentToProductRegex().Replace(columns[4], "");
 
@@ -404,10 +414,11 @@ internal enum Results
     PositionClosed,
     Positions,
     ProfitOrLoss,
-    RiskExposure
+    RiskExposure,
+    ErrorLog
 }
 
-internal delegate void ParseTable(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, Providers provider);
+internal delegate void ParseTable(string[] columns, StringBuilder fileResult, Dictionary<string, decimal> profitOrLoss, Dictionary<string, decimal> riskExposure, StringBuilder errorLog, Providers provider);
 
 internal partial class Program
 {
