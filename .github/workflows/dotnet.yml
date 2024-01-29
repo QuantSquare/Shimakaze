@@ -16,7 +16,7 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.x
     - name: Restore dependencies
