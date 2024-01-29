@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
@@ -26,5 +26,5 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
       continue-on-error: true
